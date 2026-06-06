@@ -1,0 +1,76 @@
+@extends('layouts/docs')
+
+@section('title')
+Controllers - JS-CGI-MVC
+@endsection
+
+@section('content')
+<h1>Controllers</h1>
+<p class="subtitle">Handle requests and return responses</p>
+
+<h2>Creating a Controller</h2>
+<p>Controllers are objects with handler methods. Create them in <code>app/controllers/</code>:</p>
+<pre><code>import { Response } from "../../framework/Response.js";
+
+export const PostController = {
+    index(ctx) {
+        Response.json({ posts: [] });
+    },
+
+    show(ctx) {
+        const id = ctx.params.id;
+        Response.json({ post: { id } });
+    },
+
+    store(ctx) {
+        const { title, body } = ctx.body;
+        Response.json({ message: "Created" }, 201);
+    }
+};</code></pre>
+
+<h2>The Context Object</h2>
+<p>Every handler receives a <code>ctx</code> object:</p>
+<table>
+    <tr><th>Property</th><th>Description</th></tr>
+    <tr><td><code>ctx.params</code></td><td>URL parameters (e.g. <code>:id</code>)</td></tr>
+    <tr><td><code>ctx.query</code></td><td>Query string parameters</td></tr>
+    <tr><td><code>ctx.body</code></td><td>Parsed request body (JSON)</td></tr>
+    <tr><td><code>ctx.headers</code></td><td>Request headers</td></tr>
+    <tr><td><code>ctx.cookies</code></td><td>Request cookies</td></tr>
+</table>
+
+<h2>Rendering Views</h2>
+<p>Use <code>Response.view()</code> to render a template:</p>
+<pre><code>import { Response } from "../../framework/Response.js";
+import { DB } from "../../framework/DB.js";
+
+export const PostController = {
+    index(ctx) {
+        const posts = DB.table("posts").orderBy("created_at", "DESC").get();
+        Response.view("pages/posts/index", { posts });
+    },
+
+    show(ctx) {
+        const post = DB.table("posts").where("id", ctx.params.id).first();
+        Response.view("pages/posts/show", { post });
+    }
+};</code></pre>
+
+<h2>Response Methods</h2>
+<pre><code>// JSON response
+Response.json({ key: "value" });
+Response.json({ error: "Not found" }, 404);
+
+// HTML response
+Response.html("&lt;h1&gt;Hello&lt;/h1&gt;");
+
+// Render a view template
+Response.view("pages/home", { title: "Welcome" });
+
+// Redirect
+Response.redirect("/login");
+Response.redirect("/old-page", 301);
+
+// Error page
+Response.abort(403, "Forbidden");</code></pre>
+@endsection

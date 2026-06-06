@@ -1,0 +1,173 @@
+@extends('layouts/docs')
+
+@section('title')
+Views & Templates - JS-CGI-MVC
+@endsection
+
+@section('content')
+<h1>Views &amp; Templates</h1>
+<p class="subtitle">Powerful template engine with layouts, components, and slots</p>
+
+<h2>Rendering Views</h2>
+<p>Views live in <code>views/</code> as <code>.html</code> files. Render them from controllers:</p>
+<pre><code>Response.view("pages/home", { title: "Welcome", user: currentUser });</code></pre>
+<p>The path <code>pages/home</code> resolves to <code>views/pages/home.html</code>.</p>
+
+<h2>Variables</h2>
+<p>Output variables with double curly braces (HTML-escaped by default):</p>
+@verbatim
+<pre><code>{{ title }}
+{{ user.name }}
+{{ user.address.city }}</code></pre>
+<p>For raw/unescaped output:</p>
+<pre><code>{!! rawHtml !!}</code></pre>
+@endverbatim
+
+<h2>Control Flow</h2>
+<h3>If / Else</h3>
+@verbatim
+<pre><code>@if(isAdmin)
+    <p>Welcome, admin!</p>
+@elseif(isMod)
+    <p>Welcome, moderator!</p>
+@else
+    <p>Welcome, user!</p>
+@endif</code></pre>
+@endverbatim
+
+<h3>Unless</h3>
+@verbatim
+<pre><code>@unless(banned)
+    <p>You have access.</p>
+@endunless</code></pre>
+@endverbatim
+
+<h3>Foreach</h3>
+@verbatim
+<pre><code>@foreach(users as user)
+    <p>{{ loop.iteration }}. {{ user.name }}</p>
+@endforeach</code></pre>
+@endverbatim
+<p>Loop variables available inside <code>@foreach</code>:</p>
+<table>
+    <tr><th>Variable</th><th>Description</th></tr>
+    <tr><td><code>loop.index</code></td><td>Zero-based index</td></tr>
+    <tr><td><code>loop.iteration</code></td><td>One-based iteration count</td></tr>
+    <tr><td><code>loop.first</code></td><td>True on first iteration</td></tr>
+    <tr><td><code>loop.last</code></td><td>True on last iteration</td></tr>
+    <tr><td><code>loop.count</code></td><td>Total items in array</td></tr>
+</table>
+
+<h3>Key/Value Foreach</h3>
+@verbatim
+<pre><code>@foreach(items as index, item)
+    <p>{{ index }}: {{ item }}</p>
+@endforeach</code></pre>
+@endverbatim
+
+<h3>For Loop</h3>
+@verbatim
+<pre><code>@for(i = 1; i <= 10; i++)
+    <p>Item {{ i }}</p>
+@endfor</code></pre>
+@endverbatim
+
+<h2>Includes</h2>
+<p>Include another template (inherits parent scope):</p>
+@verbatim
+<pre><code>@include('partials/header')
+@include('partials/card', { title: 'Hello', description: 'World' })</code></pre>
+@endverbatim
+
+<h2>Layouts</h2>
+<p>Create a layout in <code>views/layouts/</code>:</p>
+@verbatim
+<pre><code>&lt;!-- views/layouts/app.html --&gt;
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;title&gt;@yield('title', 'Default Title')&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;header&gt;...&lt;/header&gt;
+    @yield('content')
+    &lt;footer&gt;...&lt;/footer&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p>Extend it from a page:</p>
+<pre><code>@extends('layouts/app')
+
+@section('title')
+My Page Title
+@endsection
+
+@section('content')
+&lt;h1&gt;Hello World&lt;/h1&gt;
+&lt;p&gt;Page content here.&lt;/p&gt;
+@endsection</code></pre>
+@endverbatim
+<p>Layouts can extend other layouts — unlimited depth.</p>
+
+<h2>Components</h2>
+<p>Create reusable components with props and slots:</p>
+@verbatim
+<pre><code>&lt;!-- views/components/alert.html --&gt;
+&lt;div class="alert alert-{{ $props.type }}"&gt;
+    @if($slots.title)
+    &lt;strong&gt;{!! $slots.title !!}&lt;/strong&gt;
+    @endif
+    {!! $slot !!}
+&lt;/div&gt;</code></pre>
+@endverbatim
+<p>Use them in templates:</p>
+@verbatim
+<pre><code>@component('components/alert', { type: 'success' })
+    &lt;p&gt;Operation completed!&lt;/p&gt;
+@endcomponent
+
+@component('components/alert', { type: 'error' })
+    @slot('title')
+    Error!
+    @endslot
+    &lt;p&gt;Something went wrong.&lt;/p&gt;
+@endcomponent</code></pre>
+@endverbatim
+
+<h2>Stacks</h2>
+<p>Push content from anywhere (even components) and render at a specific point:</p>
+@verbatim
+<pre><code>&lt;!-- In your layout --&gt;
+@stack('scripts')
+
+&lt;!-- In any template/component --&gt;
+@push('scripts')
+&lt;script src="/js/chart.js"&gt;&lt;/script&gt;
+@endpush</code></pre>
+@endverbatim
+
+<h2>Once</h2>
+<p>Render a block only once, even if it's inside a loop:</p>
+@verbatim
+<pre><code>@foreach(items as item)
+    @once
+    &lt;link rel="stylesheet" href="/css/items.css"&gt;
+    @endonce
+    &lt;div&gt;{{ item.name }}&lt;/div&gt;
+@endforeach</code></pre>
+@endverbatim
+
+<h2>Utility Directives</h2>
+@verbatim
+<pre><code>&lt;!-- Output JSON (raw, for use in script tags) --&gt;
+&lt;script&gt;const config = @json(config);&lt;/script&gt;
+
+&lt;!-- Conditional CSS classes --&gt;
+&lt;div class="@class({ active: isActive, hidden: isHidden })"&gt;...&lt;/div&gt;
+
+&lt;!-- Form attribute helpers --&gt;
+&lt;input type="checkbox" @checked(rememberMe)&gt;
+&lt;option @selected(role === 'admin')&gt;Admin&lt;/option&gt;
+&lt;button @disabled(formLocked)&gt;Submit&lt;/button&gt;
+&lt;input @required(isRequired)&gt;</code></pre>
+@endverbatim
+@endsection

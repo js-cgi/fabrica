@@ -1,0 +1,42 @@
+@extends('layouts/docs')
+
+@section('title')
+Middleware - JS-CGI-MVC
+@endsection
+
+@section('content')
+<h1>Middleware</h1>
+<p class="subtitle">Filter requests before they reach your controllers</p>
+
+<h2>Creating Middleware</h2>
+<p>Middleware are functions that return <code>true</code> to continue or <code>false</code> to halt:</p>
+<pre><code>import { Response } from "../../framework/Response.js";
+
+export function adminMiddleware(ctx) {
+    if (!ctx.headers["x-admin-key"]) {
+        Response.json({ error: "Forbidden" }, 403);
+        return false;
+    }
+    return true;
+}</code></pre>
+
+<h2>Registering Middleware</h2>
+<p>Register middleware by name in <code>index.js</code>:</p>
+<pre><code>import { Pipeline } from "./framework/Pipeline.js";
+import { adminMiddleware } from "./app/middleware/admin.js";
+
+Pipeline.register("admin", adminMiddleware);</code></pre>
+
+<h2>Applying Middleware</h2>
+<p>Use the registered name in routes:</p>
+<pre><code>// Single route
+Router.get("/admin", AdminController.index, ["admin"]);
+
+// Route group
+Router.group({ prefix: "/admin", middleware: ["auth", "admin"] }, () => {
+    Router.get("/dashboard", AdminController.dashboard);
+});</code></pre>
+
+<h2>Middleware Order</h2>
+<p>Middleware runs in the order specified. If any returns <code>false</code>, subsequent middleware and the controller are skipped.</p>
+@endsection

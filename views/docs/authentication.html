@@ -1,0 +1,60 @@
+@extends('layouts/docs')
+
+@section('title')
+Authentication - JS-CGI-MVC
+@endsection
+
+@section('content')
+<h1>Authentication</h1>
+<p class="subtitle">Session-based auth out of the box</p>
+
+<h2>How It Works</h2>
+<p>JS-CGI-MVC uses cookie-based sessions. When a user logs in, their ID is stored in the session. On each request, <code>Auth.init()</code> loads the user from the database.</p>
+
+<h2>Registration</h2>
+<pre><code>import { Auth } from "../../framework/Auth.js";
+import { DB } from "../../framework/DB.js";
+
+const id = DB.table("users").insert({
+    name: "Alice",
+    email: "alice@example.com",
+    password: Auth.hashPassword("secret123"),
+    created_at: new Date().toISOString()
+});
+
+// Log them in immediately
+Auth.attempt("alice@example.com", "secret123");</code></pre>
+
+<h2>Login</h2>
+<pre><code>if (Auth.attempt(email, password)) {
+    // Success — session is set
+    const user = Auth.user();
+} else {
+    // Invalid credentials
+}</code></pre>
+
+<h2>Checking Auth State</h2>
+<pre><code>// In a controller
+if (Auth.check()) {
+    const user = Auth.user();
+    // user.id, user.name, user.email
+}
+
+// In middleware (the built-in "auth" middleware does this)
+if (!Auth.check()) {
+    Response.json({ error: "Unauthorized" }, 401);
+    return false;
+}</code></pre>
+
+<h2>Logout</h2>
+<pre><code>Auth.logout();</code></pre>
+
+<h2>Protecting Routes</h2>
+<p>Use the built-in <code>auth</code> middleware:</p>
+<pre><code>Router.get("/dashboard", DashboardController.index, ["auth"]);
+
+Router.group({ prefix: "/account", middleware: ["auth"] }, () => {
+    Router.get("/settings", AccountController.settings);
+    Router.post("/settings", AccountController.update);
+});</code></pre>
+@endsection

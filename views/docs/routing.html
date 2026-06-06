@@ -1,0 +1,40 @@
+@extends('layouts/docs')
+
+@section('title')
+Routing - JS-CGI-MVC
+@endsection
+
+@section('content')
+<h1>Routing</h1>
+<p class="subtitle">Map URLs to controller actions</p>
+
+<h2>Basic Routes</h2>
+<p>Routes are defined in <code>routes.js</code> using the Router:</p>
+<pre><code>import { Router } from "./framework/Router.js";
+import { PageController } from "./app/controllers/PageController.js";
+
+Router.get("/", PageController.index);
+Router.post("/contact", PageController.submit);
+Router.put("/posts/:id", PageController.update);
+Router.delete("/posts/:id", PageController.destroy);</code></pre>
+
+<h2>Route Parameters</h2>
+<p>Use <code>:param</code> syntax to capture URL segments:</p>
+<pre><code>Router.get("/users/:id", UserController.show);
+Router.get("/posts/:postId/comments/:commentId", CommentController.show);</code></pre>
+<p>Parameters are available in the controller via <code>ctx.params</code>:</p>
+<pre><code>show(ctx) {
+    const userId = ctx.params.id;
+}</code></pre>
+
+<h2>Route Groups</h2>
+<p>Group routes that share a prefix or middleware:</p>
+<pre><code>Router.group({ prefix: "/admin", middleware: ["auth"] }, () => {
+    Router.get("/dashboard", AdminController.dashboard);
+    Router.get("/users", AdminController.users);
+});</code></pre>
+
+<h2>Per-Route Middleware</h2>
+<p>Apply middleware to individual routes:</p>
+<pre><code>Router.get("/profile", ProfileController.show, ["auth"]);</code></pre>
+@endsection

@@ -1,0 +1,13 @@
+<div class="card">
+    <div class="card-header">
+        {!! $slots.header !!}
+    </div>
+    <div class="card-body">
+        {!! $slot !!}
+    </div>
+@if($slots.footer)
+    <div class="card-footer">
+        {!! $slots.footer !!}
+    </div>
+@endif
+</div>

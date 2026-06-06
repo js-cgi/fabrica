@@ -1,0 +1,6 @@
+<div class="alert alert-{{ $props.type }}">
+@if($slots.title)
+    <strong>{!! $slots.title !!}</strong>
+@endif
+    {!! $slot !!}
+</div>

@@ -1,0 +1,54 @@
+@extends('layouts/docs')
+
+@section('title')
+Documentation - JS-CGI-MVC
+@endsection
+
+@section('content')
+<h1>Documentation</h1>
+<p class="subtitle">Learn how to build applications with JS-CGI-MVC</p>
+
+<h2>What is JS-CGI-MVC?</h2>
+<p>JS-CGI-MVC is a lightweight MVC framework for <a href="https://js-cgi.com">JS-CGI</a>. It brings familiar patterns from frameworks like Laravel to server-side JavaScript — without Node.js, npm, or build tools.</p>
+<p>Drop your files on a server and they just work.</p>
+
+<h2>Features</h2>
+<ul>
+    <li>Expressive routing with parameters and groups</li>
+    <li>Controller-based request handling</li>
+    <li>Middleware pipeline for auth, validation, and more</li>
+    <li>SQLite query builder with chainable API</li>
+    <li>Session-based authentication out of the box</li>
+    <li>Powerful template engine with layouts, components, and slots</li>
+</ul>
+
+<h2>Project Structure</h2>
+<pre><code>/var/www/js/
+├── index.js                 # Front controller
+├── routes.js                # Route definitions
+├── framework/
+│   ├── Router.js            # Route registration &amp; matching
+│   ├── Pipeline.js          # Middleware runner
+│   ├── DB.js                # SQLite query builder
+│   ├── Auth.js              # Authentication helpers
+│   ├── Response.js          # Response utilities
+│   └── View.js              # Template engine
+├── app/
+│   ├── controllers/         # Your controllers
+│   └── middleware/          # Your middleware
+├── views/
+│   ├── layouts/             # Layout templates
+│   ├── components/          # Reusable components
+│   ├── partials/            # Include partials
+│   └── pages/               # Page templates
+├── database/
+│   └── migrations/          # Schema migrations
+└── storage/
+    └── app.db               # SQLite database</code></pre>
+
+<h2>Quick Start</h2>
+<p>1. Define a route in <code>routes.js</code></p>
+<p>2. Create a controller in <code>app/controllers/</code></p>
+<p>3. Create a view in <code>views/</code></p>
+<p>4. Visit the URL — that's it.</p>
+@endsection

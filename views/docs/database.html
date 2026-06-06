@@ -1,0 +1,77 @@
+@extends('layouts/docs')
+
+@section('title')
+Database - JS-CGI-MVC
+@endsection
+
+@section('content')
+<h1>Database</h1>
+<p class="subtitle">Query builder for SQLite</p>
+
+<h2>Connection</h2>
+<p>The database is connected automatically in <code>index.js</code>. Use <code>DB</code> in your controllers:</p>
+<pre><code>import { DB } from "../../framework/DB.js";</code></pre>
+
+<h2>Query Builder</h2>
+
+<h3>Select</h3>
+<pre><code>// Get all rows
+const users = DB.table("users").get();
+
+// With conditions
+const admins = DB.table("users")
+    .where("role", "admin")
+    .orderBy("name")
+    .get();
+
+// Single row
+const user = DB.table("users").where("id", 1).first();
+
+// Select specific columns
+const names = DB.table("users").select("id", "name").get();
+
+// Count
+const total = DB.table("users").where("active", 1).count();
+
+// Operators
+DB.table("users").where("age", "&gt;", 18).get();
+
+// Pagination
+DB.table("posts").orderBy("created_at", "DESC").limit(10).offset(20).get();</code></pre>
+
+<h3>Insert</h3>
+<pre><code>const id = DB.table("users").insert({
+    name: "Alice",
+    email: "alice@example.com",
+    password: Auth.hashPassword("secret")
+});</code></pre>
+
+<h3>Update</h3>
+<pre><code>DB.table("users").where("id", 1).update({
+    name: "Alice Smith"
+});</code></pre>
+
+<h3>Delete</h3>
+<pre><code>DB.table("users").where("id", 1).delete();</code></pre>
+
+<h2>Raw Queries</h2>
+<pre><code>const results = DB.raw("SELECT * FROM users WHERE email LIKE ?", ["%@example.com"]);
+DB.exec("DROP TABLE IF EXISTS temp_data");</code></pre>
+
+<h2>Migrations</h2>
+<p>Create migration files in <code>database/migrations/</code>:</p>
+<pre><code>import { DB } from "../../framework/DB.js";
+
+export function up() {
+    DB.exec(`CREATE TABLE IF NOT EXISTS posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        body TEXT,
+        user_id INTEGER,
+        created_at TEXT NOT NULL
+    )`);
+}</code></pre>
+<p>Import and run them in <code>index.js</code>:</p>
+<pre><code>import { up as migration002 } from "./database/migrations/002_create_posts.js";
+migration002();</code></pre>
+@endsection
