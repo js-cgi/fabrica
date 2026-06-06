@@ -12,10 +12,12 @@ A lightweight MVC framework for [js-cgi](https://github.com/js-cgi/js-cgi). Buil
 ```bash
 git clone https://github.com/js-cgi/js-cgi-mvc.git myapp
 cd myapp
-js-cgi --serve 8000
+js-cgi --serve 8000 --router index.js
 ```
 
 Visit `http://localhost:8000` — you should see the framework welcome page.
+
+The `--router index.js` flag tells the dev server to pass all unmatched requests to `index.js`, which handles routing internally.
 
 ## Project Structure
 
