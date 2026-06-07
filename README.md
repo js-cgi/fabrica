@@ -1,4 +1,4 @@
-# JS-CGI-MVC
+# Fabrica
 
 A lightweight MVC framework for [js-cgi](https://github.com/js-cgi/js-cgi). Build structured web applications with routing, controllers, a template engine, database queries, authentication, and middleware — all in plain JavaScript with zero dependencies.
 
@@ -10,7 +10,7 @@ A lightweight MVC framework for [js-cgi](https://github.com/js-cgi/js-cgi). Buil
 ## Quick Start
 
 ```bash
-git clone https://github.com/js-cgi/js-cgi-mvc.git myapp
+git clone https://github.com/js-cgi/fabrica.git myapp
 cd myapp
 js-cgi --serve 8000 --router index.js
 ```
