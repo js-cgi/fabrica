@@ -10,10 +10,9 @@ export const mail = {
     },
 
     ses: {
-        host: "email-smtp.us-east-1.amazonaws.com",
-        port: 587,
-        user: "",
-        password: "",
+        region: "us-east-1",
+        key: "",
+        secret: "",
         from: ""
     }
 };
