@@ -104,6 +104,18 @@ export class Model {
         DB.table(instance.table).where("id", this.id).delete();
     }
 
+    hasMany(relatedClass, foreignKey) {
+        return relatedClass.where(foreignKey, this.id).get();
+    }
+
+    hasOne(relatedClass, foreignKey) {
+        return relatedClass.where(foreignKey, this.id).first();
+    }
+
+    belongsTo(relatedClass, foreignKey) {
+        return relatedClass.find(this[foreignKey]);
+    }
+
     toJSON() {
         const instance = this.constructor._instance();
         const internal = ["table", "fillable", "hidden", "timestamps"];
