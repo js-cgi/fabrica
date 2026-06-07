@@ -102,6 +102,18 @@ function processInlineDirectives(line, data) {
         return evaluate(expr, data) ? "required" : "";
     });
 
+    result = result.replace(/@date\s*\(\s*(.+?)\s*\)/g, (_, expr) => {
+        const value = resolve(expr.trim(), data);
+        const dateStr = value !== undefined ? value : evaluate(expr.trim(), data);
+        if (!dateStr) return "";
+        const d = new Date(dateStr);
+        const day = d.getDate();
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const month = months[d.getMonth()];
+        const year = d.getFullYear();
+        return day + " " + month + " " + year;
+    });
+
     let changed = true;
     let safety = 0;
     while (changed && safety < 20) {
