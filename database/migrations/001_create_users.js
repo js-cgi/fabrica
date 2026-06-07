@@ -9,3 +9,7 @@ export function up() {
         created_at TEXT NOT NULL
     )`);
 }
+
+export function down() {
+    DB.exec(`DROP TABLE IF EXISTS users`);
+}

@@ -4,8 +4,9 @@ A lightweight MVC framework for [js-cgi](https://github.com/js-cgi/js-cgi). Buil
 
 ## Requirements
 
-- [js-cgi](https://js-cgi.com/download) v0.1.0+
-- Extensions: `sqlite.so`, `session.so`, `file.so`, `crypto.so`
+- [js-cgi](https://js-cgi.com/download) v0.1.1+
+- Extensions: `session.so`, `file.so`, `crypto.so`
+- Database extensions (optional): `sqlite.so`, `mysql.so`
 
 ## Quick Start
 
@@ -23,9 +24,12 @@ The `--router index.js` flag tells the dev server to pass all unmatched requests
 
 ```
 myapp/
+├── fabrica                     # CLI tool (migrations, seeders)
 ├── index.js                    # Entry point (front controller)
 ├── routes.js                   # Route definitions
 ├── .htaccess                   # Apache rewrite rules
+├── config/
+│   └── database.js             # Database configuration
 ├── framework/                  # Core framework
 │   ├── Router.js               # Route registration and resolution
 │   ├── DB.js                   # Database connection and query builder
@@ -35,19 +39,118 @@ myapp/
 │   └── Pipeline.js             # Middleware pipeline
 ├── app/
 │   ├── controllers/            # Application controllers
-│   │   ├── HomeController.js
-│   │   └── AuthController.js
 │   └── middleware/             # Custom middleware
-│       └── auth.js
 ├── views/
 │   ├── layouts/                # Layout templates
 │   ├── pages/                  # Page templates
 │   ├── partials/               # Reusable partials
 │   └── components/             # Components with slots
 ├── database/
-│   └── migrations/             # Database migrations
+│   ├── migrations/             # Database migrations
+│   └── seeders/                # Database seeders
 └── storage/
-    └── app.db                  # SQLite database
+    └── app.db                  # SQLite database (when using sqlite driver)
+```
+
+## CLI
+
+Fabrica includes a command-line tool for managing your application:
+
+```bash
+js-cgi fabrica <command>
+```
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `migrate` | Run all pending migrations |
+| `migrate:rollback` | Rollback the last batch of migrations |
+| `migrate:status` | Show which migrations have run and which are pending |
+| `db:seed` | Run the default DatabaseSeeder |
+| `db:seed <name>` | Run a specific seeder |
+
+## Database Configuration
+
+Configure your database connection in `config/database.js`:
+
+```js
+export const database = {
+    driver: "none",       // "sqlite", "mysql", or "none"
+
+    sqlite: {
+        path: "./storage/app.db"
+    },
+
+    mysql: {
+        host: "localhost",
+        port: 3306,
+        user: "root",
+        password: "",
+        database: "fabrica"
+    }
+};
+```
+
+Set `driver` to `"none"` if your application does not use a database. The framework will run without any database connection.
+
+## Migrations
+
+Migration files live in `database/migrations/` and are ordered by filename prefix:
+
+```js
+// database/migrations/001_create_users.js
+import { DB } from "../../framework/DB.js";
+
+export function up() {
+    DB.exec(`CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    )`);
+}
+
+export function down() {
+    DB.exec(`DROP TABLE IF EXISTS users`);
+}
+```
+
+Run migrations:
+
+```bash
+js-cgi fabrica migrate
+js-cgi fabrica migrate:status
+js-cgi fabrica migrate:rollback
+```
+
+Migrations are tracked in a `migrations` table with batch numbers. Rolling back reverts the last batch only.
+
+## Seeders
+
+Seeders populate the database with data. They live in `database/seeders/`:
+
+```js
+// database/seeders/UserSeeder.js
+import { DB } from "../../framework/DB.js";
+import { Auth } from "../../framework/Auth.js";
+
+export function run() {
+    DB.table("users").insert({
+        name: "Admin",
+        email: "admin@example.com",
+        password: Auth.hashPassword("password"),
+        created_at: "2026-01-01T00:00:00.000Z"
+    });
+}
+```
+
+Run seeders:
+
+```bash
+js-cgi fabrica db:seed              # Runs DatabaseSeeder.js
+js-cgi fabrica db:seed UserSeeder   # Runs a specific seeder
 ```
 
 ## Routing
@@ -89,9 +192,9 @@ export const UserController = {
 
 The `ctx` object contains: `params`, `query`, `body`, `headers`, `cookies`.
 
-## Database
+## Database Query Builder
 
-SQLite query builder with a chainable API:
+A chainable API that works with both SQLite and MySQL:
 
 ```js
 import { DB } from "./framework/DB.js";

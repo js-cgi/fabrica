@@ -5,13 +5,8 @@ import { Auth } from "./framework/Auth.js";
 import { Response } from "./framework/Response.js";
 import { authMiddleware } from "./app/middleware/auth.js";
 import "./routes.js";
-import { up as migration001 } from "./database/migrations/001_create_users.js";
 
-const DB_PATH = "./storage/app.db";
-
-DB.connect(DB_PATH);
-
-migration001();
+DB.connect();
 
 Pipeline.register("auth", authMiddleware);
 

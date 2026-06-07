@@ -1,0 +1,154 @@
+import { DB } from "./framework/DB.js";
+import { Fabrica } from "./framework/Fabrica.js";
+import { database } from "./config/database.js";
+
+const command = argv[0];
+
+if (!command) {
+    print("Fabrica v" + Fabrica.VERSION + " - MVC Framework for JS-CGI\n");
+    print("Usage: js-cgi fabrica <command>\n");
+    print("\nAvailable commands:");
+    print("  migrate            Run pending migrations");
+    print("  migrate:rollback   Rollback the last batch of migrations");
+    print("  migrate:status     Show migration status");
+    print("  db:seed            Run database seeders");
+    print("  db:seed <name>     Run a specific seeder");
+} else if (command === "migrate" || command === "migrate:rollback" || command === "migrate:status") {
+    if (database.driver === "none") {
+        print("Error: No database driver configured. Set a driver in config/database.js to run migrations.");
+    } else {
+        DB.connect();
+
+        if (command === "migrate") {
+            await migrate();
+        } else if (command === "migrate:rollback") {
+            await rollback();
+        } else if (command === "migrate:status") {
+            status();
+        }
+
+        DB.close();
+    }
+} else if (command === "db:seed") {
+    if (database.driver === "none") {
+        print("Error: No database driver configured. Set a driver in config/database.js to run seeders.");
+    } else {
+        DB.connect();
+        await seed();
+        DB.close();
+    }
+} else {
+    print("Error: Unknown command '" + command + "'");
+}
+
+async function migrate() {
+    DB.exec(`CREATE TABLE IF NOT EXISTS migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        migration TEXT NOT NULL,
+        batch INTEGER NOT NULL
+    )`);
+
+    const ran = DB.raw("SELECT migration FROM migrations");
+    const ranNames = ran.map(r => r.migration);
+
+    const files = file.list("./database/migrations");
+    if (!files || files.length === 0) {
+        print("Nothing to migrate.");
+        return;
+    }
+
+    const pending = files.filter(f => f.endsWith(".js") && !ranNames.includes(f)).sort();
+
+    if (pending.length === 0) {
+        print("Nothing to migrate.");
+        return;
+    }
+
+    const batchResult = DB.raw("SELECT MAX(batch) as batch FROM migrations");
+    const batch = (batchResult[0].batch || 0) + 1;
+
+    for (const migration of pending) {
+        const mod = await import("./database/migrations/" + migration);
+        mod.up();
+        DB.exec("INSERT INTO migrations (migration, batch) VALUES (?, ?)", [migration, batch]);
+        print("Migrated: " + migration);
+    }
+}
+
+async function rollback() {
+    DB.exec(`CREATE TABLE IF NOT EXISTS migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        migration TEXT NOT NULL,
+        batch INTEGER NOT NULL
+    )`);
+
+    const batchResult = DB.raw("SELECT MAX(batch) as batch FROM migrations");
+    const batch = batchResult[0].batch;
+
+    if (!batch) {
+        print("Nothing to rollback.");
+        return;
+    }
+
+    const migrations = DB.raw("SELECT migration FROM migrations WHERE batch = ? ORDER BY id DESC", [batch]);
+
+    for (const row of migrations) {
+        const mod = await import("./database/migrations/" + row.migration);
+        if (mod.down) {
+            mod.down();
+        }
+        DB.exec("DELETE FROM migrations WHERE migration = ?", [row.migration]);
+        print("Rolled back: " + row.migration);
+    }
+}
+
+function status() {
+    DB.exec(`CREATE TABLE IF NOT EXISTS migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        migration TEXT NOT NULL,
+        batch INTEGER NOT NULL
+    )`);
+
+    const ran = DB.raw("SELECT migration, batch FROM migrations ORDER BY batch, id");
+    const files = file.list("./database/migrations");
+    const allMigrations = files ? files.filter(f => f.endsWith(".js")).sort() : [];
+
+    if (allMigrations.length === 0) {
+        print("No migrations found.");
+        return;
+    }
+
+    const ranNames = ran.map(r => r.migration);
+
+    print("Migration Status:\n");
+    for (const m of allMigrations) {
+        const record = ran.find(r => r.migration === m);
+        if (record) {
+            print("  [Ran] " + m + " (batch " + record.batch + ")");
+        } else {
+            print("  [Pending] " + m);
+        }
+    }
+}
+
+async function seed() {
+    const name = argv[1];
+
+    if (name) {
+        const seederFile = name.endsWith(".js") ? name : name + ".js";
+        const path = "./database/seeders/" + seederFile;
+
+        if (!file.exists(path)) {
+            print("Error: Seeder not found: " + seederFile);
+            return;
+        }
+
+        const mod = await import(path);
+        mod.run();
+        print("Seeded: " + seederFile);
+    } else {
+        const mod = await import("./database/seeders/DatabaseSeeder.js");
+        mod.run();
+        print("Seeded: DatabaseSeeder.js");
+    }
+}

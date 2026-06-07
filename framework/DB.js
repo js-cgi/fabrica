@@ -1,8 +1,21 @@
+import { database } from "../config/database.js";
+
 let db = null;
+let driver = null;
 
 export const DB = {
-    connect(path) {
-        db = sqlite.open(path);
+    connect() {
+        driver = database.driver;
+
+        if (driver === "none") return this;
+
+        if (driver === "sqlite") {
+            db = sqlite.open(database.sqlite.path);
+        } else if (driver === "mysql") {
+            const cfg = database.mysql;
+            db = mysql.connect(cfg.host, cfg.user, cfg.password, cfg.database, cfg.port);
+        }
+
         return this;
     },
 
@@ -19,6 +32,14 @@ export const DB = {
 
     exec(sql, params) {
         return db.exec(sql, params || []);
+    },
+
+    lastInsertId() {
+        return db.lastInsertId();
+    },
+
+    changes() {
+        return db.changes();
     },
 
     table(name) {
@@ -98,8 +119,7 @@ class QueryBuilder {
         const placeholders = keys.map(() => "?").join(", ");
         const sql = `INSERT INTO ${this._table} (${keys.join(", ")}) VALUES (${placeholders})`;
         db.exec(sql, keys.map(k => data[k]));
-        const result = db.query("SELECT last_insert_rowid() as id");
-        return result[0].id;
+        return db.lastInsertId();
     }
 
     update(data) {
