@@ -1,6 +1,6 @@
 import { Auth } from "../../framework/Auth.js";
 import { Response } from "../../framework/Response.js";
-import { DB } from "../../framework/DB.js";
+import { User } from "../models/User.js";
 
 export const AuthController = {
     register(ctx) {
@@ -11,22 +11,21 @@ export const AuthController = {
             return;
         }
 
-        const existing = DB.table("users").where("email", email).first();
+        const existing = User.where("email", email).first();
         if (existing) {
             Response.json({ error: "Email already registered" }, 422);
             return;
         }
 
-        const id = DB.table("users").insert({
+        const user = User.create({
             name,
             email,
-            password: Auth.hashPassword(password),
-            created_at: new Date().toISOString()
+            password: Auth.hashPassword(password)
         });
 
         Auth.attempt(email, password);
 
-        Response.json({ message: "Registration successful", user: { id, name, email } }, 201);
+        Response.json({ message: "Registration successful", user: user.toJSON() }, 201);
     },
 
     login(ctx) {
@@ -38,8 +37,8 @@ export const AuthController = {
         }
 
         if (Auth.attempt(email, password)) {
-            const user = Auth.user();
-            Response.json({ message: "Login successful", user: { id: user.id, name: user.name, email: user.email } });
+            const user = User.find(Auth.user().id);
+            Response.json({ message: "Login successful", user: user.toJSON() });
         } else {
             Response.json({ error: "Invalid credentials" }, 401);
         }
@@ -51,7 +50,7 @@ export const AuthController = {
     },
 
     me(ctx) {
-        const user = Auth.user();
-        Response.json({ user: { id: user.id, name: user.name, email: user.email } });
+        const user = User.find(Auth.user().id);
+        Response.json({ user: user.toJSON() });
     }
 };
