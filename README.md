@@ -39,6 +39,7 @@ myapp/
 │   └── Pipeline.js             # Middleware pipeline
 ├── app/
 │   ├── controllers/            # Application controllers
+│   ├── models/                 # Eloquent-style models
 │   └── middleware/             # Custom middleware
 ├── views/
 │   ├── layouts/                # Layout templates
@@ -191,6 +192,77 @@ export const UserController = {
 ```
 
 The `ctx` object contains: `params`, `query`, `body`, `headers`, `cookies`.
+
+## Models
+
+Models represent database tables. Create them in `app/models/`:
+
+```js
+// app/models/User.js
+import { Model } from "../../framework/Model.js";
+
+export class User extends Model {
+    table = "users";
+    fillable = ["name", "email", "password"];
+    hidden = ["password"];
+}
+```
+
+### Usage
+
+```js
+import { User } from "../models/User.js";
+
+// Find by ID
+const user = User.find(1);
+
+// Get all records
+const users = User.all();
+
+// Query with conditions
+const admins = User.where("role", "admin").get();
+const alice = User.where("email", "alice@example.com").first();
+
+// Create a new record
+const user = User.create({ name: "Alice", email: "alice@example.com", password: "..." });
+
+// Update via instance
+user.update({ name: "Alice Updated" });
+
+// Modify and save
+user.name = "New Name";
+user.save();
+
+// Delete
+user.delete();
+```
+
+### Timestamps
+
+Models automatically set `created_at` on creation and `updated_at` on creation and every save/update. To disable timestamps on a model:
+
+```js
+export class Log extends Model {
+    table = "logs";
+    fillable = ["message", "level"];
+    timestamps = false;
+}
+```
+
+### Hidden Fields
+
+Fields listed in `hidden` are stripped from `toJSON()` output. This prevents sensitive data like passwords from appearing in API responses:
+
+```js
+const user = User.find(1);
+user.password;          // exists on the instance
+user.toJSON().password; // undefined — stripped from output
+Response.json({ user: user.toJSON() });
+```
+
+### Fillable
+
+Only fields listed in `fillable` can be set via `create()` or `update()`. This prevents mass-assignment of fields like `id` or `role` that shouldn't be user-controlled.
 
 ## Database Query Builder
 
