@@ -69,11 +69,19 @@ js-cgi fabrica <command>
 
 | Command | Description |
 |---------|-------------|
+| `serve` | Start development server on port 8000 |
+| `routes` | List all registered routes |
 | `migrate` | Run all pending migrations |
 | `migrate:rollback` | Rollback the last batch of migrations |
+| `migrate:fresh` | Drop all tables and re-run migrations |
 | `migrate:status` | Show which migrations have run and which are pending |
 | `db:seed` | Run the default DatabaseSeeder |
 | `db:seed <name>` | Run a specific seeder |
+| `make:controller <name>` | Create a new controller |
+| `make:model <name>` | Create a new model |
+| `make:migration <name>` | Create a new migration |
+| `make:middleware <name>` | Create a new middleware |
+| `make:seeder <name>` | Create a new seeder |
 
 ## Database Configuration
 
