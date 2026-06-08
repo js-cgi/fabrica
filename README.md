@@ -29,11 +29,15 @@ myapp/
 ├── routes.js                   # Route definitions
 ├── .htaccess                   # Apache rewrite rules
 ├── config/
-│   └── database.js             # Database configuration
+│   ├── database.js             # Database configuration
+│   └── mail.js                 # Mail configuration
 ├── framework/                  # Core framework
 │   ├── Router.js               # Route registration and resolution
 │   ├── DB.js                   # Database connection and query builder
+│   ├── Model.js                # Base model with relationships
 │   ├── Auth.js                 # Session-based authentication
+│   ├── Validator.js            # Request validation
+│   ├── Mail.js                 # Email (SMTP and SES)
 │   ├── Response.js             # Response helpers (JSON, HTML, view, redirect)
 │   ├── View.js                 # Template engine with Blade-like syntax
 │   └── Pipeline.js             # Middleware pipeline
@@ -264,6 +268,147 @@ Response.json({ user: user.toJSON() });
 
 Only fields listed in `fillable` can be set via `create()` or `update()`. This prevents mass-assignment of fields like `id` or `role` that shouldn't be user-controlled.
 
+### Relationships
+
+Models support `hasMany`, `hasOne`, and `belongsTo` relationships. Define named methods on your models:
+
+```js
+// app/models/User.js
+import { Model } from "../../framework/Model.js";
+import { Post } from "./Post.js";
+
+export class User extends Model {
+    table = "users";
+    fillable = ["name", "email", "password"];
+    hidden = ["password"];
+
+    posts() {
+        return this.hasMany(Post, "user_id");
+    }
+}
+```
+
+```js
+// app/models/Post.js
+import { Model } from "../../framework/Model.js";
+import { User } from "./User.js";
+
+export class Post extends Model {
+    table = "posts";
+    fillable = ["user_id", "title", "body"];
+
+    user() {
+        return this.belongsTo(User, "user_id");
+    }
+}
+```
+
+Usage in controllers:
+
+```js
+const post = Post.find(1);
+const author = post.user();        // returns User instance
+
+const user = User.find(1);
+const posts = user.posts();        // returns array of Post instances
+```
+
+## Validation
+
+Validate request data with rules:
+
+```js
+import { Validator } from "../../framework/Validator.js";
+
+const validation = Validator.validate(ctx.body, {
+    name: "required|min:2|max:50",
+    email: "required|email",
+    password: "required|min:6|confirmed"
+});
+
+if (validation.fails) {
+    const firstError = Object.values(validation.errors)[0][0];
+    // handle error
+}
+```
+
+### Available Rules
+
+| Rule | Description |
+|------|-------------|
+| `required` | Field must be present and not empty |
+| `email` | Must be a valid email address |
+| `min:n` | Must be at least n characters |
+| `max:n` | Must not exceed n characters |
+| `confirmed` | Field must match `field_confirmation` |
+| `numeric` | Must be a number |
+| `in:a,b,c` | Must be one of the listed values |
+
+Rules are separated by `|` and can be combined: `"required|email|max:255"`.
+
+The `validate()` method returns an object with:
+- `passes` — boolean, true if all rules pass
+- `fails` — boolean, true if any rule fails
+- `errors` — object keyed by field name, each value is an array of error messages
+
+## Mail
+
+Send emails using SMTP or Amazon SES:
+
+```js
+import { Mail } from "../../framework/Mail.js";
+
+Mail.send({
+    to: "recipient@example.com",
+    subject: "Hello",
+    body: "This is the email body."
+});
+```
+
+### Configuration
+
+Configure your mail driver in `config/mail.js`:
+
+```js
+export const mail = {
+    driver: "none",       // "smtp", "ses", or "none"
+
+    smtp: {
+        host: "",
+        port: 587,
+        user: "",
+        password: "",
+        from: ""
+    },
+
+    ses: {
+        region: "us-east-1",
+        key: "",
+        secret: "",
+        from: ""
+    }
+};
+```
+
+### Drivers
+
+- **`smtp`** — sends via any SMTP server using the `smtp.so` extension (STARTTLS on port 587, direct TLS on port 465)
+- **`ses`** — sends via the Amazon SES API using AWS Signature V4 (requires `http.so` and `crypto.so` extensions)
+- **`none`** — mail is disabled, `Mail.send()` throws an error
+
+### Overriding the From Address
+
+The `from` address is read from config by default. Override per-email:
+
+```js
+Mail.send({
+    from: "custom@example.com",
+    to: "recipient@example.com",
+    subject: "Hello",
+    body: "Sent from a different address."
+});
+```
+
 ## Database Query Builder
 
 A chainable API that works with both SQLite and MySQL:
@@ -316,7 +461,7 @@ A template engine with Blade-like syntax:
 - **Components** — `@component('components/card')` with `@slot` support
 - **Control flow** — `@if`/`@elseif`/`@else`/`@endif`, `@unless`, `@foreach`, `@for`
 - **Output** — `{{ escaped }}` and `{!! raw !!}`
-- **Directives** — `@json`, `@class`, `@checked`, `@selected`, `@disabled`, `@required`
+- **Directives** — `@json`, `@class`, `@checked`, `@selected`, `@disabled`, `@required`, `@date`
 - **Stacks** — `@push('scripts')` / `@stack('scripts')`
 - **Verbatim** — `@verbatim` blocks for raw template content
 
