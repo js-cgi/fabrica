@@ -2,35 +2,37 @@ import { DB } from "./framework/DB.js";
 import { Fabrica } from "./framework/Fabrica.js";
 import { database } from "./config/database.js";
 
+function println(msg) { print((msg || "") + "\n"); }
+
 const command = argv[0];
 
 if (!command) {
-    print("Fabrica v" + Fabrica.VERSION + " - MVC Framework for JS-CGI\n");
-    print("Usage: js-cgi fabrica <command>\n");
-    print("\nAvailable commands:");
-    print("  serve              Start development server on port 8000");
-    print("  routes             List all registered routes");
-    print("");
-    print("  migrate            Run pending migrations");
-    print("  migrate:rollback   Rollback the last batch of migrations");
-    print("  migrate:fresh      Drop all tables and re-run migrations");
-    print("  migrate:status     Show migration status");
-    print("");
-    print("  db:seed            Run database seeders");
-    print("  db:seed <name>     Run a specific seeder");
-    print("");
-    print("  make:controller <name>   Create a new controller");
-    print("  make:model <name>        Create a new model");
-    print("  make:migration <name>    Create a new migration");
-    print("  make:middleware <name>   Create a new middleware");
-    print("  make:seeder <name>       Create a new seeder");
+    println("Fabrica v" + Fabrica.VERSION + " - MVC Framework for JS-CGI");
+    println("Usage: js-cgi fabrica <command>");
+    println("\nAvailable commands:");
+    println("  serve              Start development server on port 8000");
+    println("  routes             List all registered routes");
+    println();
+    println("  migrate            Run pending migrations");
+    println("  migrate:rollback   Rollback the last batch of migrations");
+    println("  migrate:fresh      Drop all tables and re-run migrations");
+    println("  migrate:status     Show migration status");
+    println();
+    println("  db:seed            Run database seeders");
+    println("  db:seed <name>     Run a specific seeder");
+    println();
+    println("  make:controller <name>   Create a new controller");
+    println("  make:model <name>        Create a new model");
+    println("  make:migration <name>    Create a new migration");
+    println("  make:middleware <name>   Create a new middleware");
+    println("  make:seeder <name>       Create a new seeder");
 } else if (command === "serve") {
     serve();
 } else if (command === "routes") {
     routes();
 } else if (command === "migrate" || command === "migrate:rollback" || command === "migrate:status" || command === "migrate:fresh") {
     if (database.driver === "none") {
-        print("Error: No database driver configured. Set a driver in config/database.js to run migrations.");
+        println("Error: No database driver configured. Set a driver in config/database.js to run migrations.");
     } else {
         DB.connect();
 
@@ -48,7 +50,7 @@ if (!command) {
     }
 } else if (command === "db:seed") {
     if (database.driver === "none") {
-        print("Error: No database driver configured. Set a driver in config/database.js to run seeders.");
+        println("Error: No database driver configured. Set a driver in config/database.js to run seeders.");
     } else {
         DB.connect();
         await seed();
@@ -57,29 +59,31 @@ if (!command) {
 } else if (command.startsWith("make:")) {
     make(command, argv[1]);
 } else {
-    print("Error: Unknown command '" + command + "'");
+    println("Error: Unknown command '" + command + "'");
 }
 
 function serve() {
     const port = argv[1] || "8000";
-    print("Starting development server on port " + port + "...");
-    print("Run: js-cgi --serve " + port + " --router index.js");
+    println("Starting development server on port " + port + "...");
+    println("Run: js-cgi --serve " + port + " --router index.js");
 }
 
 function routes() {
     import("./routes.js").then(() => {
         import("./framework/Router.js").then(mod => {
             const list = mod.Router.list();
-            print("Registered Routes:\n");
-            print("  METHOD  PATH                          MIDDLEWARE");
-            print("  " + "-".repeat(60));
+            println("Registered Routes:");
+            println();
+            println("  METHOD  PATH                          MIDDLEWARE");
+            println("  " + "-".repeat(60));
             for (const route of list) {
                 const method = route.method.padEnd(6);
                 const path = route.path.padEnd(30);
                 const mw = route.middleware.length ? route.middleware.join(", ") : "-";
-                print("  " + method + "  " + path + "  " + mw);
+                println("  " + method + "  " + path + "  " + mw);
             }
-            print("\n  Total: " + list.length + " routes");
+            println();
+            println("  Total: " + list.length + " routes");
         });
     });
 }
@@ -96,14 +100,14 @@ async function migrate() {
 
     const files = file.list("./database/migrations");
     if (!files || files.length === 0) {
-        print("Nothing to migrate.");
+        println("Nothing to migrate.");
         return;
     }
 
     const pending = files.filter(f => f.endsWith(".js") && !ranNames.includes(f)).sort();
 
     if (pending.length === 0) {
-        print("Nothing to migrate.");
+        println("Nothing to migrate.");
         return;
     }
 
@@ -114,7 +118,7 @@ async function migrate() {
         const mod = await import("./database/migrations/" + migration);
         mod.up();
         DB.exec("INSERT INTO migrations (migration, batch) VALUES (?, ?)", [migration, batch]);
-        print("Migrated: " + migration);
+        println("Migrated: " + migration);
     }
 }
 
@@ -129,7 +133,7 @@ async function rollback() {
     const batch = batchResult[0].batch;
 
     if (!batch) {
-        print("Nothing to rollback.");
+        println("Nothing to rollback.");
         return;
     }
 
@@ -141,7 +145,7 @@ async function rollback() {
             mod.down();
         }
         DB.exec("DELETE FROM migrations WHERE migration = ?", [row.migration]);
-        print("Rolled back: " + row.migration);
+        println("Rolled back: " + row.migration);
     }
 }
 
@@ -150,7 +154,7 @@ async function migrateFresh() {
     for (const t of tables) {
         DB.exec("DROP TABLE IF EXISTS " + t.name);
     }
-    print("Dropped all tables.");
+    println("Dropped all tables.");
     await migrate();
 }
 
@@ -166,17 +170,18 @@ function status() {
     const allMigrations = files ? files.filter(f => f.endsWith(".js")).sort() : [];
 
     if (allMigrations.length === 0) {
-        print("No migrations found.");
+        println("No migrations found.");
         return;
     }
 
-    print("Migration Status:\n");
+    println("Migration Status:");
+    println();
     for (const m of allMigrations) {
         const record = ran.find(r => r.migration === m);
         if (record) {
-            print("  [Ran] " + m + " (batch " + record.batch + ")");
+            println("  [Ran] " + m + " (batch " + record.batch + ")");
         } else {
-            print("  [Pending] " + m);
+            println("  [Pending] " + m);
         }
     }
 }
@@ -189,23 +194,23 @@ async function seed() {
         const path = "./database/seeders/" + seederFile;
 
         if (!file.exists(path)) {
-            print("Error: Seeder not found: " + seederFile);
+            println("Error: Seeder not found: " + seederFile);
             return;
         }
 
         const mod = await import(path);
         mod.run();
-        print("Seeded: " + seederFile);
+        println("Seeded: " + seederFile);
     } else {
         const mod = await import("./database/seeders/DatabaseSeeder.js");
         mod.run();
-        print("Seeded: DatabaseSeeder.js");
+        println("Seeded: DatabaseSeeder.js");
     }
 }
 
 function make(command, name) {
     if (!name) {
-        print("Error: Please provide a name. Usage: js-cgi fabrica " + command + " <name>");
+        println("Error: Please provide a name. Usage: js-cgi fabrica " + command + " <name>");
         return;
     }
 
@@ -228,7 +233,7 @@ function make(command, name) {
             makeSeeder(name);
             break;
         default:
-            print("Error: Unknown make command: " + type);
+            println("Error: Unknown make command: " + type);
     }
 }
 
@@ -237,27 +242,27 @@ function makeController(name) {
     const path = "./app/controllers/" + filename + ".js";
 
     if (file.exists(path)) {
-        print("Error: Controller already exists: " + path);
+        println("Error: Controller already exists: " + path);
         return;
     }
 
     const content = 'import { Response } from "../../framework/Response.js";\n\nexport const ' + filename + ' = {\n    index(ctx) {\n        //\n    }\n};\n';
     file.write(path, content);
-    print("Created: " + path);
+    println("Created: " + path);
 }
 
 function makeModel(name) {
     const path = "./app/models/" + name + ".js";
 
     if (file.exists(path)) {
-        print("Error: Model already exists: " + path);
+        println("Error: Model already exists: " + path);
         return;
     }
 
     const tableName = name.toLowerCase() + "s";
     const content = 'import { Model } from "../../framework/Model.js";\n\nexport class ' + name + ' extends Model {\n    table = "' + tableName + '";\n    fillable = [];\n}\n';
     file.write(path, content);
-    print("Created: " + path);
+    println("Created: " + path);
 }
 
 function makeMigration(name) {
@@ -269,20 +274,20 @@ function makeMigration(name) {
 
     const content = 'import { DB } from "../../framework/DB.js";\n\nexport function up() {\n    DB.exec(`CREATE TABLE IF NOT EXISTS ' + name + ' (\n        id INTEGER PRIMARY KEY AUTOINCREMENT,\n        created_at TEXT NOT NULL,\n        updated_at TEXT NOT NULL\n    )`);\n}\n\nexport function down() {\n    DB.exec(`DROP TABLE IF EXISTS ' + name + '`);\n}\n';
     file.write(path, content);
-    print("Created: " + path);
+    println("Created: " + path);
 }
 
 function makeMiddleware(name) {
     const path = "./app/middleware/" + name + ".js";
 
     if (file.exists(path)) {
-        print("Error: Middleware already exists: " + path);
+        println("Error: Middleware already exists: " + path);
         return;
     }
 
     const content = 'import { Response } from "../../framework/Response.js";\n\nexport function ' + name + 'Middleware(ctx) {\n    // Return false to halt the request\n    return true;\n}\n';
     file.write(path, content);
-    print("Created: " + path);
+    println("Created: " + path);
 }
 
 function makeSeeder(name) {
@@ -290,11 +295,11 @@ function makeSeeder(name) {
     const path = "./database/seeders/" + filename + ".js";
 
     if (file.exists(path)) {
-        print("Error: Seeder already exists: " + path);
+        println("Error: Seeder already exists: " + path);
         return;
     }
 
     const content = 'import { DB } from "../../framework/DB.js";\n\nexport function run() {\n    //\n}\n';
     file.write(path, content);
-    print("Created: " + path);
+    println("Created: " + path);
 }
