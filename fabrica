@@ -8,12 +8,27 @@ if (!command) {
     print("Fabrica v" + Fabrica.VERSION + " - MVC Framework for JS-CGI\n");
     print("Usage: js-cgi fabrica <command>\n");
     print("\nAvailable commands:");
+    print("  serve              Start development server on port 8000");
+    print("  routes             List all registered routes");
+    print("");
     print("  migrate            Run pending migrations");
     print("  migrate:rollback   Rollback the last batch of migrations");
+    print("  migrate:fresh      Drop all tables and re-run migrations");
     print("  migrate:status     Show migration status");
+    print("");
     print("  db:seed            Run database seeders");
     print("  db:seed <name>     Run a specific seeder");
-} else if (command === "migrate" || command === "migrate:rollback" || command === "migrate:status") {
+    print("");
+    print("  make:controller <name>   Create a new controller");
+    print("  make:model <name>        Create a new model");
+    print("  make:migration <name>    Create a new migration");
+    print("  make:middleware <name>   Create a new middleware");
+    print("  make:seeder <name>       Create a new seeder");
+} else if (command === "serve") {
+    serve();
+} else if (command === "routes") {
+    routes();
+} else if (command === "migrate" || command === "migrate:rollback" || command === "migrate:status" || command === "migrate:fresh") {
     if (database.driver === "none") {
         print("Error: No database driver configured. Set a driver in config/database.js to run migrations.");
     } else {
@@ -25,6 +40,8 @@ if (!command) {
             await rollback();
         } else if (command === "migrate:status") {
             status();
+        } else if (command === "migrate:fresh") {
+            await migrateFresh();
         }
 
         DB.close();
@@ -37,8 +54,34 @@ if (!command) {
         await seed();
         DB.close();
     }
+} else if (command.startsWith("make:")) {
+    make(command, argv[1]);
 } else {
     print("Error: Unknown command '" + command + "'");
+}
+
+function serve() {
+    const port = argv[1] || "8000";
+    print("Starting development server on port " + port + "...");
+    print("Run: js-cgi --serve " + port + " --router index.js");
+}
+
+function routes() {
+    import("./routes.js").then(() => {
+        import("./framework/Router.js").then(mod => {
+            const list = mod.Router.list();
+            print("Registered Routes:\n");
+            print("  METHOD  PATH                          MIDDLEWARE");
+            print("  " + "-".repeat(60));
+            for (const route of list) {
+                const method = route.method.padEnd(6);
+                const path = route.path.padEnd(30);
+                const mw = route.middleware.length ? route.middleware.join(", ") : "-";
+                print("  " + method + "  " + path + "  " + mw);
+            }
+            print("\n  Total: " + list.length + " routes");
+        });
+    });
 }
 
 async function migrate() {
@@ -102,6 +145,15 @@ async function rollback() {
     }
 }
 
+async function migrateFresh() {
+    const tables = DB.raw("SELECT name FROM sqlite_master WHERE type='table' AND name != 'sqlite_sequence'");
+    for (const t of tables) {
+        DB.exec("DROP TABLE IF EXISTS " + t.name);
+    }
+    print("Dropped all tables.");
+    await migrate();
+}
+
 function status() {
     DB.exec(`CREATE TABLE IF NOT EXISTS migrations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -117,8 +169,6 @@ function status() {
         print("No migrations found.");
         return;
     }
-
-    const ranNames = ran.map(r => r.migration);
 
     print("Migration Status:\n");
     for (const m of allMigrations) {
@@ -151,4 +201,100 @@ async function seed() {
         mod.run();
         print("Seeded: DatabaseSeeder.js");
     }
+}
+
+function make(command, name) {
+    if (!name) {
+        print("Error: Please provide a name. Usage: js-cgi fabrica " + command + " <name>");
+        return;
+    }
+
+    const type = command.replace("make:", "");
+
+    switch (type) {
+        case "controller":
+            makeController(name);
+            break;
+        case "model":
+            makeModel(name);
+            break;
+        case "migration":
+            makeMigration(name);
+            break;
+        case "middleware":
+            makeMiddleware(name);
+            break;
+        case "seeder":
+            makeSeeder(name);
+            break;
+        default:
+            print("Error: Unknown make command: " + type);
+    }
+}
+
+function makeController(name) {
+    const filename = name.endsWith("Controller") ? name : name + "Controller";
+    const path = "./app/controllers/" + filename + ".js";
+
+    if (file.exists(path)) {
+        print("Error: Controller already exists: " + path);
+        return;
+    }
+
+    const content = 'import { Response } from "../../framework/Response.js";\n\nexport const ' + filename + ' = {\n    index(ctx) {\n        //\n    }\n};\n';
+    file.write(path, content);
+    print("Created: " + path);
+}
+
+function makeModel(name) {
+    const path = "./app/models/" + name + ".js";
+
+    if (file.exists(path)) {
+        print("Error: Model already exists: " + path);
+        return;
+    }
+
+    const tableName = name.toLowerCase() + "s";
+    const content = 'import { Model } from "../../framework/Model.js";\n\nexport class ' + name + ' extends Model {\n    table = "' + tableName + '";\n    fillable = [];\n}\n';
+    file.write(path, content);
+    print("Created: " + path);
+}
+
+function makeMigration(name) {
+    const files = file.list("./database/migrations");
+    const existing = files ? files.filter(f => f.endsWith(".js")).sort() : [];
+    const nextNum = String(existing.length + 1).padStart(3, "0");
+    const filename = nextNum + "_" + name + ".js";
+    const path = "./database/migrations/" + filename;
+
+    const content = 'import { DB } from "../../framework/DB.js";\n\nexport function up() {\n    DB.exec(`CREATE TABLE IF NOT EXISTS ' + name + ' (\n        id INTEGER PRIMARY KEY AUTOINCREMENT,\n        created_at TEXT NOT NULL,\n        updated_at TEXT NOT NULL\n    )`);\n}\n\nexport function down() {\n    DB.exec(`DROP TABLE IF EXISTS ' + name + '`);\n}\n';
+    file.write(path, content);
+    print("Created: " + path);
+}
+
+function makeMiddleware(name) {
+    const path = "./app/middleware/" + name + ".js";
+
+    if (file.exists(path)) {
+        print("Error: Middleware already exists: " + path);
+        return;
+    }
+
+    const content = 'import { Response } from "../../framework/Response.js";\n\nexport function ' + name + 'Middleware(ctx) {\n    // Return false to halt the request\n    return true;\n}\n';
+    file.write(path, content);
+    print("Created: " + path);
+}
+
+function makeSeeder(name) {
+    const filename = name.endsWith("Seeder") ? name : name + "Seeder";
+    const path = "./database/seeders/" + filename + ".js";
+
+    if (file.exists(path)) {
+        print("Error: Seeder already exists: " + path);
+        return;
+    }
+
+    const content = 'import { DB } from "../../framework/DB.js";\n\nexport function run() {\n    //\n}\n';
+    file.write(path, content);
+    print("Created: " + path);
 }
